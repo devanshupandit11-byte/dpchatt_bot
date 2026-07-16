@@ -1,28 +1,24 @@
+import asyncio
+import os
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
-import os
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "👑 Main Daku hoon!\n\n"
-        "⚡ Welcome to Daku AI.\n"
-        "Use /help to see commands."
+        "👑 Main Daku hoon!\n\n⚡ Welcome to Daku AI."
     )
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "📜 Available Commands:\n\n"
-        "/start - Start the bot\n"
-        "/help - Show help\n"
-        "/ping - Check bot status"
+        "/start\n/help\n/ping"
     )
 
 async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("🏓 Pong! Daku is online.")
+    await update.message.reply_text("🏓 Pong!")
 
-def main():
+async def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
@@ -30,7 +26,17 @@ def main():
     app.add_handler(CommandHandler("ping", ping))
 
     print("✅ Daku Bot Started...")
-    app.run_polling()
+
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()
+
+    try:
+        await asyncio.Event().wait()
+    finally:
+        await app.updater.stop()
+        await app.stop()
+        await app.shutdown()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
