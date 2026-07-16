@@ -1,5 +1,6 @@
 import os
-import google.generativeai as genai
+import asyncio
+
 from telegram import Update
 from telegram.ext import (
     Application,
@@ -9,20 +10,18 @@ from telegram.ext import (
     filters,
 )
 
+from google import genai
+
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel("gemini-1.5-flash")
-
-
+client = genai.Client(api_key=GEMINI_API_KEY)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👑 Main Daku hoon!\n\n"
         "⚡ Daku AI Online.\n"
-        "To bolo Daku se kya baat krni h 😎"
+        "🔥 Sawal tera... jawab Daku ka."
     )
-
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -32,39 +31,46 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/ping"
     )
 
-
 async def ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🏓 Pong!")
 
-
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_text = update.message.text
-
     try:
-        response = model.generate_content(user_text)
+        prompt = update.message.text
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+        )
+
         await update.message.reply_text(response.text)
 
     except Exception as e:
         print(e)
         await update.message.reply_text(
-            "❌ AI se reply nahi aa paya. Thodi der baad try karo."
+            "❌ AI Error. Thodi der baad try karo."
         )
-
-
-def main():
+        async def main():
     app = Application.builder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_cmd))
     app.add_handler(CommandHandler("ping", ping))
-
-    app.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, chat)
-    )
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
 
     print("✅ Daku AI Started...")
-    app.run_polling()
+
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()
+
+    try:
+        await asyncio.Event().wait()
+    finally:
+        await app.updater.stop()
+        await app.stop()
+        await app.shutdown()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
